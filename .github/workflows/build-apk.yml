@@ -10,6 +10,9 @@ jobs:
     name: Build Android APK (Chaquopy)
     runs-on: ubuntu-22.04
     timeout-minutes: 180
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
       - uses: actions/checkout@v4
@@ -30,12 +33,13 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
+      - name: Accept SDK licenses and install platforms
         run: |
+          set -e
+          yes | sdkmanager --licenses >/tmp/sdk-licenses.txt || true
           sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls -la "$ANDROID_HOME"
 
       - name: Prepare Python sources for Chaquopy
         run: |
