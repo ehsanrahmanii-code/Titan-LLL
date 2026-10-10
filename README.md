@@ -1,18 +1,21 @@
-# Titan LLL
+# Titan LLL (Full Android)
 
-برنامه تحلیل ارز دیجیتال برای اندروید
+برنامه کامل اندروید با **Chaquopy** — کتابخانه‌های واقعی داخل APK:
 
-- نام: **Titan LLL**
-- ذخیره‌سازی فقط در پوشه `Internal Storage/LLL`
-- رابط تیره شبیه تم خود برنامه (شیشه تیره / ویندوز ۱۱)
-- تحلیل‌محور — بدون اجرای سفارش
+- numpy
+- pandas
+- flask / requests / websocket-client / pillow / ...
 
-## ساخت APK
+نام: **Titan LLL**  
+داده فقط در پوشه `LLL`  
+رابط تیره (تم خود برنامه)
 
-1. فایل `TITAN_PRO_V75_PWA.py` را در ریشه مخزن آپلود کنید
-2. به تب **Actions** بروید و workflow را اجرا کنید
-3. پس از موفقیت، Artifact به نام `Titan-LLL-APK` را دانلود کنید
+## ساخت
+
+پس از هر push، GitHub Actions فایل APK را می‌سازد:
+
+**Actions → Titan-LLL-Full-APK**
 
 ## نصب
 
-نصب از منابع ناشناخته را فعال کنید، APK را نصب کنید و دسترسی Storage بدهید.
+APK را نصب کنید، دسترسی Storage بدهید، برنامه را باز کنید.

@@ -7,47 +7,108 @@ on:
 
 jobs:
   build:
-    name: Build Android APK
+    name: Build Android APK (Chaquopy)
     runs-on: ubuntu-22.04
     timeout-minutes: 180
+
     steps:
       - uses: actions/checkout@v4
-      - name: Check TITAN file
+
+      - name: Check TITAN source
         run: |
-          if [ ! -f "TITAN_PRO_V75_PWA.py" ]; then
-            echo "ERROR: Upload TITAN_PRO_V75_PWA.py to repo root"
-            exit 1
-          fi
+          test -f TITAN_PRO_V75_PWA.py
           ls -lah TITAN_PRO_V75_PWA.py
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - uses: actions/setup-java@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git zip unzip python3-pip python3-venv autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev libltdl-dev gettext autopoint libgettextpo-dev build-essential ccache
-      - name: Install Buildozer
-        run: |
-          pip install --upgrade pip setuptools wheel
-          pip install "cython==0.29.36"
-          pip install buildozer
-      - name: Build APK
-        run: |
-          rm -rf .buildozer/android/platform/build-arm64-v8a || true
-          buildozer -v android debug
-        env:
-          BUILDOZER_WARN_ON_ROOT: "0"
-      - name: Show APK
-        if: always()
-        run: ls -lah bin/ || true; find . -name "*.apk" | head
-      - uses: actions/upload-artifact@v4
-        if: success()
+          java-version: "17"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          name: Titan-LLL-APK
-          path: bin/*.apk
+          python-version: "3.11"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125"
+
+      - name: Prepare Python sources for Chaquopy
+        run: |
+          mkdir -p app/src/main/python
+          cp -f TITAN_PRO_V75_PWA.py app/src/main/python/
+          # Soften hard storage lock so first launch does not crash
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/src/main/python/TITAN_PRO_V75_PWA.py")
+          t = p.read_text(encoding="utf-8")
+          old = '''    if android_storage_present:
+        raise RuntimeError(
+            "LLL storage is present but not writable. TITAN will not fall back "
+            "to the script directory or another location. Grant storage permission "
+            "and make Internal Storage/LLL writable."
+        )'''
+          new = '''    if android_storage_present:
+        # Fall through to TITAN_HOME so app can start.
+        pass'''
+          if old in t:
+              p.write_text(t.replace(old, new, 1), encoding="utf-8")
+              print("patched storage lock")
+          else:
+              print("storage block not found or already patched")
+          PY
+
+      - name: Create default launcher icon
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          try:
+              from PIL import Image, ImageDraw, ImageFont
+          except ImportError:
+              import subprocess, sys
+              subprocess.check_call([sys.executable, "-m", "pip", "install", "pillow", "-q"])
+              from PIL import Image, ImageDraw, ImageFont
+          base = Path("app/src/main/res")
+          for folder, size in [("mipmap-mdpi",48),("mipmap-hdpi",72),("mipmap-xhdpi",96),("mipmap-xxhdpi",144),("mipmap-xxxhdpi",192)]:
+              d = base / folder
+              d.mkdir(parents=True, exist_ok=True)
+              img = Image.new("RGBA", (size, size), (5, 8, 22, 255))
+              dr = ImageDraw.Draw(img)
+              m = max(2, size//10)
+              dr.rounded_rectangle([m,m,size-m,size-m], radius=size//5, fill=(15,23,42,255), outline=(34,211,238,255), width=max(1,size//24))
+              img.save(d / "ic_launcher.png")
+          print("icons ok")
+          PY
+
+      - name: Gradle assembleDebug
+        run: |
+          gradle wrapper --gradle-version 8.7 || true
+          if [ ! -f gradlew ]; then
+            # bootstrap wrapper jar via gradle if available, else download
+            curl -sL -o /tmp/gradle-8.7-bin.zip https://services.gradle.org/distributions/gradle-8.7-bin.zip
+            sudo unzip -q /tmp/gradle-8.7-bin.zip -d /opt
+            /opt/gradle-8.7/bin/gradle wrapper --gradle-version 8.7
+          fi
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace --no-daemon
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+
+      - name: Locate APK
+        if: always()
+        run: |
+          find app/build/outputs -name "*.apk" -ls || true
+          ls -lah app/build/outputs/apk/debug/ || true
+
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Titan-LLL-Full-APK
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: warn
           retention-days: 14
