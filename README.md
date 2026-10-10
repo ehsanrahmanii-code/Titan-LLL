@@ -1,2 +1,18 @@
-# Titan-LLL
-Titan LLL - Android crypto analysis app. Data locked to LLL folder.
+# Titan LLL
+
+برنامه تحلیل ارز دیجیتال برای اندروید
+
+- نام: **Titan LLL**
+- ذخیره‌سازی فقط در پوشه `Internal Storage/LLL`
+- رابط تیره شبیه تم خود برنامه (شیشه تیره / ویندوز ۱۱)
+- تحلیل‌محور — بدون اجرای سفارش
+
+## ساخت APK
+
+1. فایل `TITAN_PRO_V75_PWA.py` را در ریشه مخزن آپلود کنید
+2. به تب **Actions** بروید و workflow را اجرا کنید
+3. پس از موفقیت، Artifact به نام `Titan-LLL-APK` را دانلود کنید
+
+## نصب
+
+نصب از منابع ناشناخته را فعال کنید، APK را نصب کنید و دسترسی Storage بدهید.
